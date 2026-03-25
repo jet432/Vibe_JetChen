@@ -10,14 +10,22 @@ if str(APP_ROOT) not in sys.path:
     sys.path.insert(0, str(APP_ROOT))
 
 from repositories.account_repository import AccountRepository
+from database import init_db
 from repositories.transaction_repository import TransactionRepository
 from repositories.user_repository import UserRepository
 from services.account_service import AccountService
-from views.bank_view import account_to_dict, transaction_to_dict, user_to_dict
+from views.bank_view import account_response, account_to_dict, transaction_to_dict, user_to_dict
 
 
 app = Flask(__name__)
 CORS(app)
+try:
+    init_db()
+except Exception as exc:
+    raise RuntimeError(
+        "Database initialization failed. Set DB_USER, DB_PASSWORD, DB_HOST, DB_PORT, DB_NAME "
+        "or DATABASE_URL environment variables before starting the API."
+    ) from exc
 
 user_repository = UserRepository()
 account_repository = AccountRepository()
@@ -28,31 +36,27 @@ account_service = AccountService(account_repository, transaction_repository)
 @app.route("/api/register", methods=["POST"])
 def register():
     data = request.get_json(silent=True) or {}
-    username = data.get("username")
-    password = data.get("password")
+    username = data.get("name") or data.get("username")
+    email = data.get("email")
 
-    if not username or not password:
-        return jsonify({"error": "username and password are required"}), 400
+    if not username or not email:
+        return jsonify({"error": "name and email are required"}), 400
 
     existing = user_repository.get_by_username(username)
     if existing is not None:
-        return jsonify({"error": "Username already exists"}), 400
+        return jsonify({"error": "User name already exists"}), 400
 
-    user = user_repository.add(username=username, password=password)
+    existing_email = user_repository.get_by_email(email)
+    if existing_email is not None:
+        return jsonify({"error": "Email already exists"}), 400
+
+    user = user_repository.add(username=username, email=email)
     return jsonify({"message": "User registered successfully", "user": user_to_dict(user)}), 201
 
 
 @app.route("/api/login", methods=["POST"])
 def login():
-    data = request.get_json(silent=True) or {}
-    username = data.get("username")
-    password = data.get("password")
-
-    user = user_repository.get_by_username(username or "")
-    if user is None or user.password != password:
-        return jsonify({"error": "Invalid username or password"}), 401
-
-    return jsonify({"message": "Login successful", "username": user.username}), 200
+    return jsonify({"error": "Login is not part of the documented backend scope"}), 501
 
 
 @app.route("/api/accounts", methods=["POST"])
@@ -63,6 +67,10 @@ def create_account():
 
     if user_id is None or not account_type:
         return jsonify({"error": "userId and accountType are required"}), 400
+
+    user = user_repository.get_by_id(int(user_id))
+    if user is None:
+        return jsonify({"error": "User not found"}), 404
 
     try:
         account = account_service.createAccount(userId=int(user_id), accountType=str(account_type))
@@ -77,7 +85,9 @@ def get_account(account_id: str):
     account = account_service.getAccount(accountId=account_id)
     if account is None:
         return jsonify({"error": "Account not found"}), 404
-    return jsonify(account_to_dict(account)), 200
+    user = user_repository.get_by_id(account.user_id)
+    user_name = user.username if user else None
+    return jsonify(account_response(account, user_name)), 200
 
 
 @app.route("/api/accounts/<account_id>/deposit", methods=["POST"])

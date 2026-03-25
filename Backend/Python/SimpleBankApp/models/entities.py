@@ -6,7 +6,7 @@ from datetime import datetime
 class User:
     user_id: int
     username: str
-    password: str
+    email: str
 
 
 @dataclass

@@ -1,19 +1,41 @@
 from models.entities import Transaction
+from database import SessionLocal
+from models.sql_models import TransactionModel
 
 
 class TransactionRepository:
     def __init__(self) -> None:
-        self._transactions: dict[str, list[Transaction]] = {
-            "1": [Transaction(account_id="1", tx_type="DEPOSIT", amount=500.0)],
-            "2": [Transaction(account_id="2", tx_type="DEPOSIT", amount=1200.0)],
-            "3": [Transaction(account_id="3", tx_type="DEPOSIT", amount=3000.0)],
-        }
+        pass
 
     def add(self, transaction: Transaction) -> None:
-        if transaction.account_id not in self._transactions:
-            self._transactions[transaction.account_id] = []
-        self._transactions[transaction.account_id].append(transaction)
+        if not transaction.account_id.isdigit():
+            return
+        with SessionLocal() as db:
+            row = TransactionModel(
+                account_id=int(transaction.account_id),
+                txn_type=transaction.tx_type,
+                amount=transaction.amount,
+            )
+            db.add(row)
+            db.commit()
 
     def get_for_account(self, account_id: str) -> list[Transaction]:
-        return self._transactions.get(account_id, [])
+        if not account_id.isdigit():
+            return []
+        with SessionLocal() as db:
+            rows = (
+                db.query(TransactionModel)
+                .filter(TransactionModel.account_id == int(account_id))
+                .order_by(TransactionModel.txn_id.asc())
+                .all()
+            )
 
+            return [
+                Transaction(
+                    account_id=str(row.account_id),
+                    tx_type=row.txn_type,
+                    amount=float(row.amount),
+                    timestamp=row.created_at.isoformat() if row.created_at else "",
+                )
+                for row in rows
+            ]
