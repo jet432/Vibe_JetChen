@@ -31,9 +31,18 @@ function WithdrawPage() {
   }
 
   return (
-    <section className="auth-wrap">
-      <article className="auth-card">
-        <h1>Withdraw Money</h1>
+    <section className="dashboard-shell">
+      <article className="auth-card wide-card dashboard-main dashboard-page">
+        <header className="dashboard-head">
+          <div>
+            <p className="eyebrow">Overview</p>
+            <h1>Withdraw Money</h1>
+          </div>
+          <div className="dashboard-user">
+            <strong>Account #{accountId}</strong>
+            <span>Withdraw</span>
+          </div>
+        </header>
         <p>Account ID: {accountId}</p>
 
         <form className="auth-form" onSubmit={handleSubmit}>

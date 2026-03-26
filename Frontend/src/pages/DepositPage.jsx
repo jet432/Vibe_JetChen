@@ -31,9 +31,18 @@ function DepositPage() {
   }
 
   return (
-    <section className="auth-wrap">
-      <article className="auth-card">
-        <h1>Deposit Money</h1>
+    <section className="dashboard-shell">
+      <article className="auth-card wide-card dashboard-main dashboard-page">
+        <header className="dashboard-head">
+          <div>
+            <p className="eyebrow">Overview</p>
+            <h1>Deposit Money</h1>
+          </div>
+          <div className="dashboard-user">
+            <strong>Account #{accountId}</strong>
+            <span>Deposit</span>
+          </div>
+        </header>
         <p>Account ID: {accountId}</p>
 
         <form className="auth-form" onSubmit={handleSubmit}>

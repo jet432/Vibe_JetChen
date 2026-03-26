@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { Navigate, useParams } from 'react-router-dom'
+import { Link, Navigate, useParams } from 'react-router-dom'
 import { api } from '../services/api.js'
 
 function TransactionHistoryPage() {
@@ -34,13 +34,27 @@ function TransactionHistoryPage() {
   }
 
   return (
-    <section className="auth-wrap">
-      <article className="auth-card wide-card">
-        <h1>Transaction History</h1>
+    <section className="dashboard-shell">
+      <article className="auth-card wide-card dashboard-main dashboard-page">
+        <header className="dashboard-head">
+          <div>
+            <p className="eyebrow">Overview</p>
+            <h1>Transaction History</h1>
+          </div>
+          <div className="dashboard-user">
+            <strong>Account #{accountId}</strong>
+            <span>Transactions</span>
+          </div>
+        </header>
+        <div className="history-top-actions">
+          <Link className="btn secondary small-btn" to="/account">
+            Back
+          </Link>
+        </div>
         <p>Account ID: {accountId}</p>
 
         {error ? <p className="form-error">{error}</p> : null}
-        {isLoading ? <p>Loading transactions...</p> : null}
+        {isLoading ? <p className="dashboard-note">Loading transactions...</p> : null}
 
         {!isLoading ? (
           <div className="table-wrap">
