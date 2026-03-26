@@ -36,6 +36,7 @@ class TransactionRepository:
                     tx_type=row.txn_type,
                     amount=float(row.amount),
                     timestamp=row.created_at.isoformat() if row.created_at else "",
+                    txn_id=row.txn_id,
                 )
                 for row in rows
             ]

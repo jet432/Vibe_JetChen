@@ -45,3 +45,21 @@ class AccountRepository:
             row.account_type = account.account_type
             row.balance = account.balance
             db.commit()
+
+    def get_for_user(self, user_id: int) -> list[Account]:
+        with SessionLocal() as db:
+            rows = (
+                db.query(AccountModel)
+                .filter(AccountModel.user_id == user_id)
+                .order_by(AccountModel.account_id.asc())
+                .all()
+            )
+            return [
+                Account(
+                    account_id=str(row.account_id),
+                    user_id=row.user_id,
+                    account_type=row.account_type,
+                    balance=float(row.balance),
+                )
+                for row in rows
+            ]

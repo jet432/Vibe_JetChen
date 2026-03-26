@@ -7,6 +7,7 @@ class User:
     user_id: int
     username: str
     email: str
+    password: str | None = None
 
 
 @dataclass
@@ -23,4 +24,5 @@ class Transaction:
     tx_type: str
     amount: float
     timestamp: str = field(default_factory=lambda: datetime.utcnow().isoformat() + "Z")
+    txn_id: int | None = None
 

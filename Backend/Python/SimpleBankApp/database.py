@@ -1,7 +1,7 @@
 import os
 from urllib.parse import quote_plus
 
-from sqlalchemy import create_engine
+from sqlalchemy import create_engine, inspect, text
 from sqlalchemy.orm import declarative_base, sessionmaker
 
 
@@ -23,3 +23,8 @@ Base = declarative_base()
 
 def init_db() -> None:
     Base.metadata.create_all(bind=engine)
+    inspector = inspect(engine)
+    user_columns = {column["name"] for column in inspector.get_columns("users")}
+    if "password" not in user_columns:
+        with engine.begin() as connection:
+            connection.execute(text("ALTER TABLE users ADD COLUMN password VARCHAR(255)"))

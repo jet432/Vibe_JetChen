@@ -9,6 +9,7 @@ class UserModel(Base):
     user_id = Column(Integer, primary_key=True, autoincrement=True)
     name = Column(String(100))
     email = Column(String(100), unique=True)
+    password = Column(String(255))
     created_at = Column(TIMESTAMP, server_default=text("CURRENT_TIMESTAMP"))
 
 
