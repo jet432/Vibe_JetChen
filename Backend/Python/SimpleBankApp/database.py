@@ -1,30 +1,68 @@
 import os
-from urllib.parse import quote_plus
+from pathlib import Path
+from threading import Lock
 
-from sqlalchemy import create_engine, inspect, text
-from sqlalchemy.orm import declarative_base, sessionmaker
+from pymongo import ASCENDING, MongoClient, ReturnDocument
+
+try:
+    from dotenv import load_dotenv
+except ImportError:
+    load_dotenv = None
 
 
-DB_USER = os.getenv("DB_USER", "bankapp")
-DB_PASSWORD = quote_plus(os.getenv("DB_PASSWORD", ""))
-DB_HOST = os.getenv("DB_HOST", "localhost")
-DB_PORT = os.getenv("DB_PORT", "3306")
-DB_NAME = os.getenv("DB_NAME", "bankdb")
+if load_dotenv is not None:
+    # Load .env from the project root for local development defaults.
+    load_dotenv(dotenv_path=Path(__file__).resolve().parent / ".env")
 
-SQLALCHEMY_DATABASE_URL = os.getenv(
-    "DATABASE_URL",
-    f"mysql+pymysql://{DB_USER}:{DB_PASSWORD}@{DB_HOST}:{DB_PORT}/{DB_NAME}",
-)
 
-engine = create_engine(SQLALCHEMY_DATABASE_URL, pool_pre_ping=True, future=True)
-SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
-Base = declarative_base()
+_mongo_client: MongoClient | None = None
+_mongo_db = None
+_mongo_lock = Lock()
+
+
+def _build_mongo_client() -> tuple[MongoClient, str]:
+    uri = os.getenv("MONGODB_URI", "").strip()
+    db_name = os.getenv("MONGODB_DB_NAME", "").strip()
+    if not uri or not db_name:
+        raise RuntimeError("MONGODB_URI and MONGODB_DB_NAME environment variables are required")
+    client = MongoClient(uri)
+    return client, db_name
+
+
+def get_db():
+    global _mongo_client, _mongo_db
+    if _mongo_db is not None:
+        return _mongo_db
+
+    with _mongo_lock:
+        if _mongo_db is None:
+            client, db_name = _build_mongo_client()
+            _mongo_client = client
+            _mongo_db = client[db_name]
+    return _mongo_db
 
 
 def init_db() -> None:
-    Base.metadata.create_all(bind=engine)
-    inspector = inspect(engine)
-    user_columns = {column["name"] for column in inspector.get_columns("users")}
-    if "password" not in user_columns:
-        with engine.begin() as connection:
-            connection.execute(text("ALTER TABLE users ADD COLUMN password VARCHAR(255)"))
+    db = get_db()
+    db.command("ping")
+
+    db.users.create_index([("user_id", ASCENDING)], unique=True)
+    db.users.create_index([("name", ASCENDING)], unique=True)
+    db.users.create_index([("email", ASCENDING)], unique=True)
+
+    db.accounts.create_index([("account_id", ASCENDING)], unique=True)
+    db.accounts.create_index([("user_id", ASCENDING)])
+
+    db.transactions.create_index([("txn_id", ASCENDING)], unique=True)
+    db.transactions.create_index([("account_id", ASCENDING), ("txn_id", ASCENDING)])
+
+
+def get_next_sequence(name: str) -> int:
+    db = get_db()
+    row = db.counters.find_one_and_update(
+        {"_id": name},
+        {"$inc": {"value": 1}},
+        upsert=True,
+        return_document=ReturnDocument.AFTER,
+    )
+    return int(row["value"])

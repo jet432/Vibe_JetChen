@@ -30,8 +30,8 @@ try:
     init_db()
 except Exception as exc:
     raise RuntimeError(
-        "Database initialization failed. Set DB_USER, DB_PASSWORD, DB_HOST, DB_PORT, DB_NAME "
-        "or DATABASE_URL environment variables before starting the API."
+        "Database initialization failed. Set MONGODB_URI and MONGODB_DB_NAME "
+        "environment variables before starting the API."
     ) from exc
 
 user_repository = UserRepository()
